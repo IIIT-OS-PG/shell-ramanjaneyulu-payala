@@ -11,20 +11,34 @@
 #include <fstream>
 #include<map>
 #define MAXLINE 100
+void Redirect(char **);
+void Pipe(char *);
 using namespace std;
- char *l=(char *)malloc(10*sizeof(char));
- char *r=(char *)malloc(10*sizeof(char));
-//map<char *,char *>mps;
+int pipe_Called=1; 
+map<string,char *>mps;
 void setEnv(){
   ofstream myfile;
   myfile.open ("mybashrc");
-  myfile <<getenv("HOME")<<endl;
-  myfile<<getenv("PATH")<<endl;
+   char myhost[100];
+    myhost[100]='\0';
+    gethostname(myhost,100);
+  myfile<<myhost<<endl;  
   myfile<<getenv("USER")<<endl;
-  myfile<<getenv("HOST")<<endl;
+  myfile<<getenv("PATH")<<endl;
+  myfile <<getenv("HOME")<<endl;
+  
   myfile.close();
 }
+void getEnv(){
+    char myhost[100];
+    myhost[100]='\0';
+    gethostname(myhost,100);
+   cout<<getenv("USER")<<"@"<<myhost<<"$";
+
+}
 void alias(char buf[]){
+    char *l=(char *)malloc(10*sizeof(char));
+     char *r=(char *)malloc(10*sizeof(char));
  char temp[MAXLINE];
     strcpy(temp,buf);
 char *token = strtok(buf,"=");
@@ -45,33 +59,35 @@ while (st)
         st=strtok(NULL," "); 
     }      
     strcpy(l,mp[j-1]);
+
+  string Str = string(l);  
    
-// mps.insert(l,r);
-// cout<<"map size---"<<mps.size()<<endl;
-// for (auto itr = mps.begin(); itr != mps.end(); ++itr) { 
-//         cout << itr->first 
-//              << '\t' << itr->second << '\n'; 
-//     } 
+ mps.insert(make_pair(Str,r));
+cout<<"map size---"<<mps.size()<<endl;
+for (auto itr = mps.begin(); itr != mps.end(); ++itr) { 
+        cout << itr->first 
+             << '\t' << itr->second << '\n'; 
+    } 
 
 }
 // void General(){
 
 // }
-void replaceAlias(char *par[]){
+void replaceAlias(char *par[],char *l,char *r){
  int v=0;
-   
+ int count=0;  
     char *par1[10];
     while(par[v]!=NULL){
    // cout<<"l::"<<l<<endl;     
     if(strcmp(par[v],l)==0){
-    cout<<"par::"<<par[0]<<endl;
+    //cout<<"par::"<<par[0]<<endl;
         break;
     }
     v++;
     }
     //par[v]=r;
     int i6=v;
-    cout<<"r---"<<par[0]<<endl;
+   // cout<<"r---"<<par[0]<<endl;
     char *ali = strtok(r," ");
     char *buf4[10];
     int d=0;
@@ -85,50 +101,68 @@ void replaceAlias(char *par[]){
     int i1=0;
     while(i1!=v){
         par1[i1]=par[i1];
+        count++;
         i1++;
     }  
     int i2=0;
     while(i2!=d){
         par1[v++]=buf4[i2++];
+        count++;
     }
-    while(par[i6++]!=NULL){
+    i6++;
+    while(par[i6]!=NULL){
      par1[v++]=par[i6];
+     count++;
      i6++;
     } 
     par1[v]=NULL;
-    int pid,status;
-    int i5=0;
-    char buf5[MAXLINE];
-    int i7=0;
-
-    while(par1[i5]!=NULL){
-        int i8=0;
-        while(par1[i5][i7]!='\0'){
-            buf5[i7++]=par[i5][i8++];
+    cout<<"par::"<<par1[0];
+    cout<<"count"<<count<<endl;
+    int k=0;
+    char bufr[MAXLINE];
+    for(int i=0;i<count;i++){
+        int q=0;
+        while(par1[i][q]){
+         bufr[k++]=par1[i][q++];
         }
-        buf5[i7++]=' ';
-        i5++;
+        bufr[k++]=' ';
     }
-    buf5[i7]='\0';
-    cout<<"buf5--::"<<buf5<<endl;
-
+    bufr[k]='\0';
+    cout<<"bufr::"<<bufr<<endl;
+    
+    int k1=0;
+int f1=0,f2=0;
+while(par1[k1]!=NULL){
+    if(strcmp(">",par1[k1])==0||strcmp(">>",par1[k1])==0)
+    f1=1;
+    if(strcmp("|",par1[k1])==0)
+    f2=1;
+k1++;
+}
+if(f1){
+Redirect(par1);
+return;
+}
+if(f2){
+    pipe_Called=0;
+Pipe(bufr);
+return;
+}
+    int pid,status;
     if ((pid = fork()) < 0) {
     cout<<"fork error";
 } else if (pid == 0) {
 
     execvp(par1[0],par1);
-exit(1);
 }
 if ((pid = waitpid(pid, &status, 0)) < 0)
-cout<<"waitpid error";
-cout<<"%% "<<endl;
+cout<<"wait"<<endl;
 exit(0);
-//return par1;
-}
-
+ }
 void Pipe(char *buf){
-    int pipefd[2];
-  char *par[10];
+    cout<<"buf:p:"<<buf;
+int pipefd[2];
+char *par[10];
 int c=1;
 char *ch;  
 int k=0;
@@ -171,12 +205,12 @@ char *token = strtok(buf,"|");
                 dup2(pipefd[1], 1);
             }
             execvp(arg[0], arg);
-            close(pipefd[1]);
+            //close(pipefd[1]);
         } 
         else 
         {
             close(pipefd[1]);
-            // wait(NULL);
+             wait(NULL);
             fd = pipefd[0];
             com++;
         }
@@ -217,6 +251,14 @@ dup2(fd2, 1);
 close(fd2);
 }
 
+   int pid,status;
+    if ((pid = fork()) < 0) {
+    cout<<"fork error";
+} else if (pid == 0) {
+
+    execvp(par[0],par);
+}
+
 }
 
 
@@ -230,7 +272,7 @@ int status;
 
 
 while (1) {
-    cout<<"%%"; 
+    getEnv();
 fgets(buf, MAXLINE, stdin);
 if (buf[strlen(buf) - 1] == '\n')
 buf[strlen(buf) - 1] = '\0';
@@ -246,10 +288,35 @@ int i=0;
     }
     par[i]=NULL;    
 
+if(!strcmp(par[0],"exit")) 
+ exit(0);   
+
+if(strcmp("cd",par[0])==0){
+    if(!strcmp("~",par[1])){
+     chdir(getenv("HOME"));
+    }
+    else if(chdir(par[1])<0)
+      cout<<"no such directory found"<<endl;
+    continue;
+}
 
 if ((pid = fork()) < 0) {
 cout<<"fork error";
 } else if (pid == 0) {
+int j=0;
+while(par[j]!=NULL){
+    string Str = string(par[j]);
+    auto it=mps.find(Str);
+    char left[Str.size()+1];
+    char *rigt;
+    if(it!=mps.end()){
+       // cout<<"entered"<<endl;
+    strcpy(left,Str.c_str());  
+    rigt=it->second;
+    replaceAlias(par,left,rigt);
+    }
+    j++;
+}    
 char *ch=buf;
 int k=0;
 int f1=0,f2=0,f3=0;
@@ -264,25 +331,14 @@ k++;
 }
 if(strcmp("alias",par[0])==0){
     alias(buf1);
-    cout<<"l:"<<l<<" r:"<<r<<endl;
+   // cout<<"l:"<<l<<" r:"<<r<<endl;
     }
-int j=0;
-while(par[j]!=NULL){
-    if(strcmp(par[j],"a")==0){
-        cout<<"entered"<<endl;
-    replaceAlias(par);
-    }
-    j++;
-}
-if(strcmp("cd",par[0])==0){
-    if(chdir(par[1])<0)
-      cout<<"no such directory found"<<endl;
-    continue;
-}
 
-if(f1)
+if(f1){
 Redirect(par);
-if(f2){
+continue;
+}
+if(f2&&pipe_Called){
 Pipe(buf1);
 continue;
 }
@@ -296,8 +352,7 @@ execvp(par[0],par);
 //exit(1);
 }
 if ((pid = waitpid(pid, &status, 0)) < 0)
-//cout<<"waitpid error";
-cout<<"%% "<<endl;
+cout<<"wait";
 }
-//exit(0);
+
 }
